@@ -1,0 +1,12 @@
+src/App.tsx(294,12): error TS2741: Property 'currentCode' is missing in type '{ problems: Problem[]; selectedProblem: Problem | null; onSelectProblem: (p: Problem) => Promise<void>; activeTab: ActivityTab; onTabChange: Dispatch<...>; memories: MemoryFact[]; solvedIds: Set<...>; }' but required in type 'SidebarProps'.
+src/App.tsx(361,14): error TS2739: Type '{ problem: Problem | null; onRunCode: (code: string, _language: Language) => Promise<TestResult | null>; onCodeChange: (code: string) => void; onCursorChange: Dispatch<...>; language: Language; complexity: ComplexityInfo; setComplexity: Dispatch<...>; }' is missing the following properties from type 'EditorPanelProps': passMode, setPassMode
+src/components/EditorPanel.tsx(547,60): error TS2339: Property 'actual' does not exist on type '{ input: string; expected: string; got: string; pass: boolean; executionTime: number; }'.
+src/components/MemoryFlowBar.tsx(3,15): error TS2305: Module '"../types"' has no exported member 'MemoryFlowStep'.
+src/components/Sidebar.tsx(75,19): error TS2339: Property 'forEach' does not exist on type '{}'.
+src/components/Sidebar.tsx(302,76): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/components/Sidebar.tsx(302,83): error TS18048: 'e.metadata' is possibly 'undefined'.
+src/components/Sidebar.tsx(302,103): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/components/Sidebar.tsx(302,109): error TS18048: 'e.metadata' is possibly 'undefined'.
+src/hooks/useHindsight.ts(3,27): error TS2305: Module '"../types"' has no exported member 'MemoryFlowStep'.
+src/hooks/useMemoryFlow.ts(2,15): error TS2305: Module '"../types"' has no exported member 'MemoryFlowStep'.
+src/utils/evaluator.ts(69,5): error TS2578: Unused '@ts-expect-error' directive.

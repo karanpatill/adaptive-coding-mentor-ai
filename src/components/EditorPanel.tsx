@@ -544,7 +544,7 @@ export function EditorPanel({
                     </span>
                     {!tc.pass && (
                       <span style={{ color: 'var(--color-text-muted)', paddingLeft: 12 }}>
-                        Expected: {tc.expected} · Got: {tc.actual}
+                        Expected: {tc.expected} · Got: {tc.got}
                       </span>
                     )}
                   </div>

@@ -58,6 +58,8 @@ export interface MemoryFact {
   timestamp?: string;
 }
 
+export type MemoryFlowStep = 'retain' | 'recall' | 'reflect' | 'observe' | null;
+
 export type ActivityTab = 'problems' | 'skills' | 'timeline' | 'memory';
 
 export type OutputTab = 'output' | 'problems' | 'tests';

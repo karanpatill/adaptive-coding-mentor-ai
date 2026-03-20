@@ -37,6 +37,7 @@ export default function App() {
   const [complexity, setComplexity] = useState<ComplexityInfo>({
     time: 'O(1)', space: 'O(1)', hasRecursion: false, isExpensive: false, lines: 0, chars: 0
   });
+  const [passMode, setPassMode] = useState<'single' | 'all'>('single');
   const [cursorPos, setCursorPos] = useState({ ln: 1, col: 1 });
   const brainPulseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -299,6 +300,7 @@ export default function App() {
             onTabChange={setActiveTab}
             memories={memories}
             solvedIds={solvedIds}
+            currentCode={currentCode}
           />
 
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
@@ -366,6 +368,8 @@ export default function App() {
               language={language}
               complexity={complexity}
               setComplexity={setComplexity}
+              passMode={passMode}
+              setPassMode={setPassMode}
             />
           </div>
 

@@ -71,8 +71,9 @@ export function Sidebar({
 
     memories.forEach(m => {
       const meta = m.metadata;
-      if (meta && meta.tags) {
-        meta.tags.forEach((tag: string) => {
+      if (meta && meta.tags && Array.isArray(meta.tags)) {
+        meta.tags.forEach((tag: unknown) => {
+          if (typeof tag !== 'string') return;
           let category = '';
           if (tag.toLowerCase().includes('array')) category = 'Arrays';
           else if (tag.toLowerCase().includes('string')) category = 'Strings';
@@ -299,7 +300,7 @@ export function Sidebar({
                           
                           {isSolved && savedCode && (
                             <button 
-                              onClick={() => setShowDiff({ old: savedCode, title: e.metadata.problem, lang: e.metadata.language })}
+                              onClick={() => setShowDiff({ old: savedCode, title: e.metadata?.problem as string, lang: e.metadata?.language as string })}
                               style={{
                                 display: 'flex',
                                 alignItems: 'center',
