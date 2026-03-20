@@ -16,15 +16,24 @@ export interface ValidationHelpers {
   treeToArray: (root: unknown) => (number | null)[];
 }
 
+export interface TestCaseResult {
+  input: string;
+  expected: string;
+  got: string;
+  pass: boolean;
+  executionTime: number;
+}
+
 export interface TestResult {
   pass: boolean;
-  cases: Array<{
-    input: string;
-    expected: string;
-    got: string;
-    pass: boolean;
-    executionTime: number;
-  }>;
+  cases: TestCaseResult[];
+  error?: string;
+  totalTime: number;
+}
+
+export interface EvalResult {
+  pass: boolean;
+  cases: TestCaseResult[];
   error?: string;
   totalTime: number;
 }
@@ -38,7 +47,11 @@ export interface Problem {
   tags: string[];
   starterCode: Record<Language, string>;
   testCases: TestCase[];
-  validate?: (userFn: (...args: unknown[]) => unknown, testCase: TestCase, helpers: ValidationHelpers) => { pass: boolean, got: unknown };
+  validate?: (
+    userFn: (...args: unknown[]) => unknown,
+    testCase: TestCase,
+    helpers: ValidationHelpers
+  ) => { pass: boolean; got: unknown };
   timeComplexity: string;
   spaceComplexity: string;
 }
