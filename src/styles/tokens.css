@@ -1,0 +1,49 @@
+:root {
+  /* Base */
+  --color-bg:           #0a0a0b;
+  --color-bg-elevated:  #111113;
+  --color-bg-overlay:   #18181b;
+  --color-bg-subtle:    #1c1c1f;
+
+  /* Borders */
+  --color-border:       rgba(255,255,255,0.06);
+  --color-border-hover: rgba(255,255,255,0.12);
+  --color-border-focus: rgba(99,102,241,0.6);
+
+  /* Text */
+  --color-text-primary:   #f4f4f5;
+  --color-text-secondary: #a1a1aa;
+  --color-text-muted:     #52525b;
+  --color-text-code:      #e4e4e7;
+
+  /* Accent — Indigo/Violet like VS Code */
+  --color-accent:         #6366f1;
+  --color-accent-hover:   #818cf8;
+  --color-accent-subtle:  rgba(99,102,241,0.12);
+  --color-accent-glow:    rgba(99,102,241,0.25);
+
+  /* Memory / Hindsight — Emerald */
+  --color-memory:         #10b981;
+  --color-memory-subtle:  rgba(16,185,129,0.1);
+  --color-memory-glow:    rgba(16,185,129,0.2);
+
+  /* Status */
+  --color-success:  #22c55e;
+  --color-error:    #ef4444;
+  --color-warning:  #f59e0b;
+
+  /* Sidebar widths */
+  --sidebar-activity: 48px;
+  --sidebar-panel:    240px;
+  --mentor-width:     340px;
+
+  /* Fonts */
+  --font-ui:   'Geist', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+}
