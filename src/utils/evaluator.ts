@@ -1,5 +1,4 @@
 // Robust Code Evaluator for CodeMentor AI
-// Supports complex data structures and basic infinite loop protection
 
 export class ListNode {
   val: number;
@@ -62,14 +61,24 @@ export class MinHeap {
   }
 }
 
-export class MaxHeap extends MinHeap {
-  // Simple hack for MaxHeap using MinHeap with negative values OR full implementation
-  // Let's do a quick full implementation concept
-  override push(val: number) {
+export class MaxHeap {
+  heap: number[];
+  constructor() { this.heap = []; }
+  push(val: number) {
     this.heap.push(val);
-    this.bubbleUpMax();
+    this.bubbleUp();
   }
-  private bubbleUpMax() {
+  pop() {
+    if (this.size() === 0) return null;
+    if (this.size() === 1) return this.heap.pop();
+    const max = this.heap[0];
+    this.heap[0] = this.heap.pop()!;
+    this.bubbleDown();
+    return max;
+  }
+  size() { return this.heap.length; }
+  peek() { return this.heap[0]; }
+  private bubbleUp() {
     let index = this.heap.length - 1;
     while (index > 0) {
       const parent = Math.floor((index - 1) / 2);
@@ -78,7 +87,19 @@ export class MaxHeap extends MinHeap {
       index = parent;
     }
   }
-  // Simplified for now, in a real scenario we'd swap all bubble methods
+  private bubbleDown() {
+    let index = 0;
+    while (true) {
+      const left = index * 2 + 1;
+      const right = index * 2 + 2;
+      let largest = index;
+      if (left < this.heap.length && this.heap[left] > this.heap[largest]) largest = left;
+      if (right < this.heap.length && this.heap[right] > this.heap[largest]) largest = right;
+      if (largest === index) break;
+      [this.heap[index], this.heap[largest]] = [this.heap[largest], this.heap[index]];
+      index = largest;
+    }
+  }
 }
 
 export class UnionFind {
@@ -97,7 +118,6 @@ export class UnionFind {
   }
 }
 
-// Helpers for test runner
 export const helpers = {
   arrayToLinkedList: (arr: number[]): ListNode | null => {
     if (!arr || arr.length === 0) return null;
@@ -152,104 +172,102 @@ export const helpers = {
         result.push(null);
       }
     }
-    // Trim trailing nulls
     while (result[result.length - 1] === null) result.pop();
     return result;
   },
 };
 
-import type { ValidationHelpers, TestCase } from '../types';
-
-export interface EvalResult {
-  pass: boolean;
-  cases: Array<{
-    input: unknown;
-    expected: unknown;
-    got: unknown;
-    pass: boolean;
-    executionTime: number;
-  }>;
-  error?: string;
-  totalTime: number;
-}
+import type { ValidationHelpers, TestCase, TestCaseResult, TestResult } from '../types';
 
 export async function evaluateCode(
   userCode: string,
   testCases: TestCase[],
-  validate: (userFn: (...args: unknown[]) => unknown, testCase: TestCase, helpers: ValidationHelpers) => { pass: boolean, got: unknown },
+  validate: (
+    userFn: (...args: unknown[]) => unknown,
+    testCase: TestCase,
+    helpers: ValidationHelpers
+  ) => { pass: boolean; got: unknown },
   entryPointName: string
-): Promise<EvalResult> {
+): Promise<TestResult> {
   const startTime = performance.now();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const results: any[] = [];
+  const results: TestCaseResult[] = [];
 
   try {
-    // Prepare the sandbox environment
     const sandboxCode = `
       const { arrayToLinkedList, linkedListToArray, arrayToTree, treeToArray } = helpers;
-      
       ${userCode}
-      
       return typeof ${entryPointName} === 'function' ? ${entryPointName} : null;
     `;
 
-    // Construct the function in a way that includes helpers in scope
     const userFnFactory = new Function(
-      'helpers', 
-      'ListNode', 
-      'TreeNode', 
-      'MinHeap', 
-      'MaxHeap', 
-      'UnionFind', 
+      'helpers',
+      'ListNode',
+      'TreeNode',
+      'MinHeap',
+      'MaxHeap',
+      'UnionFind',
       sandboxCode
     );
-    const userFn = userFnFactory(helpers, ListNode, TreeNode, MinHeap, MaxHeap, UnionFind);
+
+    const userFn = userFnFactory(
+      helpers, ListNode, TreeNode, MinHeap, MaxHeap, UnionFind
+    );
 
     if (typeof userFn !== 'function') {
-      throw new Error(`Entry point function "${entryPointName}" not found or not a function.`);
+      throw new Error(
+        `Entry point "${entryPointName}" not found or not a function.`
+      );
     }
 
     for (const testCase of testCases) {
       const caseStart = performance.now();
-      
-      const executionPromise = new Promise<{ pass: boolean; got: unknown }>((resolve, reject) => {
-        try {
-          const result = validate(userFn, testCase, helpers);
-          resolve(result);
-        } catch (e) {
-          reject(e);
-        }
-      });
 
-      const timeoutPromise = new Promise<{ pass: boolean; got: unknown }>((_, reject) => 
-        setTimeout(() => reject(new Error('Execution Timeout (3s)')), 3000)
+      const executionPromise = new Promise<{ pass: boolean; got: unknown }>(
+        (resolve, reject) => {
+          try {
+            resolve(validate(userFn, testCase, helpers));
+          } catch (e) {
+            reject(e);
+          }
+        }
       );
 
-      const { pass, got } = await Promise.race([executionPromise, timeoutPromise]);
+      const timeoutPromise = new Promise<{ pass: boolean; got: unknown }>(
+        (_, reject) =>
+          setTimeout(() => reject(new Error('Execution Timeout (3s)')), 3000)
+      );
+
+      const { pass, got } = await Promise.race([
+        executionPromise,
+        timeoutPromise,
+      ]);
+
       const caseEnd = performance.now();
 
-      results.push({
-        input: testCase.inputDisplay || JSON.stringify(testCase.input),
-        expected: testCase.expectedDisplay || JSON.stringify(testCase.expected),
-        got: JSON.stringify(got),
+      // ALL fields explicitly cast to string — fixes TS2322
+      const caseResult: TestCaseResult = {
+        input:         String(testCase.inputDisplay    ?? JSON.stringify(testCase.input)),
+        expected:      String(testCase.expectedDisplay ?? JSON.stringify(testCase.expected)),
+        got:           JSON.stringify(got) ?? 'undefined',
         pass,
-        executionTime: Math.round(caseEnd - caseStart)
-      });
+        executionTime: Math.round(caseEnd - caseStart),
+      };
+
+      results.push(caseResult);
     }
 
-    const totalTime = Math.round(performance.now() - startTime);
     return {
-      pass: results.every(r => r.pass),
-      cases: results,
-      totalTime
+      pass:      results.every(r => r.pass),
+      cases:     results,
+      totalTime: Math.round(performance.now() - startTime),
     };
 
   } catch (err: unknown) {
     return {
-      pass: false,
-      cases: [],
-      error: err instanceof Error ? err.message : 'Evaluation error',
-      totalTime: Math.round(performance.now() - startTime)
+      pass:      false,
+      cases:     [],
+      error:     err instanceof Error ? err.message : 'Evaluation error',
+      totalTime: Math.round(performance.now() - startTime),
     };
   }
 }
