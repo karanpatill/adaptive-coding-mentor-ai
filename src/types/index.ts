@@ -73,7 +73,7 @@ export interface MemoryFact {
 
 export type MemoryFlowStep = 'retain' | 'recall' | 'reflect' | 'observe' | null;
 
-export type ActivityTab = 'problems' | 'skills' | 'timeline' | 'memory';
+export type ActivityTab = 'problems' | 'skills' | 'timeline' | 'memory' | 'settings';
 
 export type OutputTab = 'output' | 'problems' | 'tests';
 
@@ -97,4 +97,13 @@ export interface ComplexityInfo {
   isExpensive: boolean;
   lines: number;
   chars: number;
+}
+
+export interface AppSettings {
+  fontSize: number;
+  fontFamily: string;
+  tabSize: number;
+  responseLength: 'concise' | 'detailed';
+  hintStyle: 'socratic' | 'direct';
+  autoAnalyze: boolean;
 }

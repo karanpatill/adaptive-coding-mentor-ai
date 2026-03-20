@@ -46,7 +46,7 @@ export async function recall(
   bankId: string,
   query: string,
   limit = 5
-): Promise<Array<{ content: string; timestamp?: string }>> {
+): Promise<Array<{ content: string; timestamp?: string; metadata?: any }>> {
   const res = await fetch(`${BASE}/memory-banks/${bankId}/recall`, {
     method: 'POST',
     headers: headers(key),
@@ -70,4 +70,11 @@ export async function reflect(
   if (!res.ok) return '';
   const data = await res.json();
   return data.response || data.reflection || '';
+}
+
+export async function clearAllMemories(key: string, bankId: string): Promise<void> {
+  await fetch(`${BASE}/memory-banks/${bankId}/facts`, {
+    method: 'DELETE',
+    headers: headers(key),
+  });
 }

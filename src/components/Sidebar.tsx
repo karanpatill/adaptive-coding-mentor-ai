@@ -9,7 +9,10 @@ import {
 } from 'recharts';
 import { formatDistanceToNow } from 'date-fns';
 import { DiffModal } from './DiffModal';
-import type { Problem, ActivityTab, MemoryFact } from '../types';
+import { TimelineTab } from './TimelineTab';
+import { BrainTab } from './BrainTab';
+import { SettingsTab } from './SettingsTab';
+import type { Problem, ActivityTab, MemoryFact, UserSession, AppSettings } from '../types';
 
 interface SidebarProps {
   problems: Problem[];
@@ -20,6 +23,13 @@ interface SidebarProps {
   memories: MemoryFact[];
   solvedIds: Set<string>;
   currentCode: string;
+  session: UserSession;
+  settings: AppSettings;
+  onSettingsChange: (s: AppSettings) => void;
+  onLogout: () => void;
+  onClearMemories: () => void;
+  onUpdateGroqKey: (key: string) => void;
+  onRefreshMemories: () => void;
 }
 
 const DIFFICULTY_STYLE: Record<string, React.CSSProperties> = {
@@ -49,6 +59,13 @@ export function Sidebar({
   memories,
   solvedIds,
   currentCode,
+  session,
+  settings,
+  onSettingsChange,
+  onLogout,
+  onClearMemories,
+  onUpdateGroqKey,
+  onRefreshMemories,
 }: SidebarProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [hoveredActivity, setHoveredActivity] = useState<string | null>(null);
@@ -151,13 +168,18 @@ export function Sidebar({
           <div style={{ flex: 1 }} />
           <button
             title="Settings"
+            onClick={() => onTabChange('settings')}
+            onMouseEnter={() => setHoveredActivity('settings')}
+            onMouseLeave={() => setHoveredActivity(null)}
             style={{
               width: 36, height: 36,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: 'var(--color-text-muted)',
-              transition: 'color 0.15s',
+              borderRadius: 'var(--radius-sm)',
+              color: activeTab === 'settings' ? 'var(--color-accent)' : hoveredActivity === 'settings' ? 'var(--color-text-secondary)' : 'var(--color-text-muted)',
+              borderLeft: activeTab === 'settings' ? '2px solid var(--color-accent)' : '2px solid transparent',
+              transition: 'all 0.15s',
             }}
           >
             <Settings size={18} />
@@ -270,79 +292,30 @@ export function Sidebar({
             )}
 
             {activeTab === 'timeline' && (
-              <div style={{ padding: '8px 0' }}>
-                {timelineEvents.map((e, idx) => {
-                  const isSolved = e.metadata?.type === 'solved';
-                  const savedCode = e.metadata?.code as string;
-                  return (
-                    <div key={idx} style={{ 
-                      padding: '12px 16px', 
-                      borderBottom: '1px solid rgba(255,255,255,0.03)',
-                    }}>
-                      <div style={{ display: 'flex', gap: 10 }}>
-                        <div style={{
-                          width: 8, height: 8,
-                          borderRadius: '50%',
-                          background: isSolved ? 'var(--color-success)' : 'var(--color-error)',
-                          marginTop: 4,
-                          boxShadow: `0 0 10px ${isSolved ? 'var(--color-success)' : 'var(--color-error)'}`
-                        }} />
-                        <div style={{ flex: 1 }}>
-                          <span style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>
-                            {e.timestamp ? formatDistanceToNow(new Date(e.timestamp), { addSuffix: true }) : 'unknown'}
-                          </span>
-                          <p style={{ 
-                            fontSize: 11, 
-                            color: 'var(--color-text-secondary)', 
-                            margin: '4px 0',
-                            lineHeight: '1.4'
-                          }}>{e.content}</p>
-                          
-                          {isSolved && savedCode && (
-                            <button 
-                              onClick={() => setShowDiff({ old: savedCode, title: e.metadata?.problem as string, lang: e.metadata?.language as string })}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 4,
-                                marginTop: 6,
-                                padding: '2px 8px',
-                                background: 'rgba(99,102,241,0.1)',
-                                border: '1px solid rgba(99,102,241,0.2)',
-                                borderRadius: 4,
-                                color: 'var(--color-accent)',
-                                fontSize: 10,
-                                cursor: 'pointer',
-                              }}
-                            >
-                              <GitCompare size={10} /> Compare with current
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              <TimelineTab 
+                session={session} 
+                onCompareDiff={(oldCode, title, lang) => setShowDiff({ old: oldCode, title, lang })} 
+              />
             )}
 
             {activeTab === 'memory' && (
-              <div style={{ padding: '12px' }}>
-                {memories.map((m, i) => (
-                  <div key={i} style={{
-                    padding: '8px 12px',
-                    background: 'rgba(255,255,255,0.02)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: 4,
-                    marginBottom: 8,
-                    fontSize: 11,
-                    fontFamily: 'var(--font-mono)',
-                    color: 'var(--color-text-secondary)'
-                  }}>
-                    {m.content}
-                  </div>
-                ))}
-              </div>
+              <BrainTab 
+                session={session} 
+                memories={memories} 
+                onRefresh={onRefreshMemories} 
+              />
+            )}
+
+            {activeTab === 'settings' && (
+              <SettingsTab
+                settings={settings}
+                onChange={onSettingsChange}
+                session={session}
+                memoryCount={memories.length}
+                onLogout={onLogout}
+                onClearMemories={onClearMemories}
+                onUpdateGroqKey={onUpdateGroqKey}
+              />
             )}
           </div>
         </div>
