@@ -13,7 +13,8 @@ import { useHindsight } from './hooks/useHindsight';
 import { Brain, LogOut, CheckCircle2, Flame, ChevronDown, ChevronUp, Play, Clock, XCircle, Copy, Languages } from 'lucide-react';
 import { evaluateCode } from './utils/evaluator';
 import { problems } from './data/problems';
-import type { UserSession, Problem, Language, TestResult, ActivityTab, CodeSuggestion, ComplexityInfo } from './types';
+import type { UserSession, Problem, Language, TestResult, ActivityTab, CodeSuggestion, ComplexityInfo, AppSettings } from './types';
+import { clearAllMemories } from './api/hindsight';
 import { CommandPalette } from './components/CommandPalette';
 
 export default function App() {
@@ -40,6 +41,19 @@ export default function App() {
   const [passMode, setPassMode] = useState<'single' | 'all'>('single');
   const [cursorPos, setCursorPos] = useState({ ln: 1, col: 1 });
   const brainPulseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [settings, setSettings] = useState<AppSettings>(() => {
+    const saved = localStorage.getItem('codementor_settings');
+    if (saved) return JSON.parse(saved);
+    return {
+      fontSize: 14,
+      fontFamily: 'JetBrains Mono',
+      tabSize: 2,
+      responseLength: 'concise',
+      hintStyle: 'socratic',
+      autoAnalyze: true
+    };
+  });
 
   const { memories, activeStep, retainMemory, recallMemories, reflectOnQuery } = useHindsight({
     hindsightKey: session?.hindsightKey ?? '',
@@ -100,16 +114,57 @@ export default function App() {
     setSelectedProblem(null);
   }, []);
 
+  const handleSettingsChange = useCallback((s: AppSettings) => {
+    setSettings(s);
+    localStorage.setItem('codementor_settings', JSON.stringify(s));
+  }, []);
+
+  useEffect(() => {
+    if (session) {
+      if (!brainPulseTimeout.current) {
+        recallMemories(`Initialize clean bank for ${session.username}`);
+      }
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('memory-flow', { 
+          detail: { type: 'init', bankId: session.bankId, totalFacts: memories?.length || 0 } 
+        }));
+      }, 500);
+    }
+  }, [session, recallMemories, memories?.length]);
+
+  const handleClearMemories = useCallback(async () => {
+    if (!session) return;
+    try {
+      await clearAllMemories(session.hindsightKey, session.bankId);
+      await recallMemories(`Initialize clean bank for ${session.username}`);
+    } catch (e) {
+      console.error(e);
+    }
+  }, [session, recallMemories]);
+
+  const handleUpdateGroqKey = useCallback((key: string) => {
+    if (!session) return;
+    const updated = { ...session, groqKey: key };
+    setSession(updated);
+    localStorage.setItem('codementor_session', JSON.stringify(updated));
+  }, [session]);
+
+  const handleRefreshMemories = useCallback(async () => {
+    if (!session) return;
+    await recallMemories(`${session.username} all coding patterns`);
+    pulseBrain();
+  }, [session, recallMemories, pulseBrain]);
+
   const handleSelectProblem = useCallback(async (p: Problem) => {
     setSelectedProblem(p);
     setCurrentCode('');
-    pulseBrain();
-    try {
-      await recallMemories(`${p.title} ${p.tags.join(' ')} ${p.difficulty} mistakes`);
-    } catch {
-      // ignore
+    window.dispatchEvent(new CustomEvent('memory-flow', { detail: { type: 'select', problemName: p.title } }));
+    
+    if (session) {
+      await recallMemories(`User started working on ${p.title}. Has ${p.difficulty} difficulty.`);
+      pulseBrain();
     }
-  }, [recallMemories, pulseBrain]);
+  }, [session, recallMemories, pulseBrain]);
 
   const handleRunCode = useCallback(async (
     code: string,
@@ -148,44 +203,63 @@ export default function App() {
 
     // Retain result
     const isFirstSolve = result.pass && !solvedIds.has(selectedProblem.id);
-    const content = result.pass
-      ? `User ${session.username} solved "${selectedProblem.title}" (${selectedProblem.difficulty}) in ${_language}.`
-      : `User ${session.username} failed "${selectedProblem.title}" (${selectedProblem.difficulty}). ` +
-        `${result.cases.filter((c: any) => !c.pass).length} test(s) failed. ${result.error ?? ''}`.trim();
 
-    await retainMemory(content, {
-      type: result.pass ? 'solved' : 'failed',
-      problem: selectedProblem.id,
-      difficulty: selectedProblem.difficulty,
-      tags: selectedProblem.tags,
-      code: code, // Saved code for Diff View
-      language: _language,
-      timestamp: new Date().toISOString(),
-    });
-    pulseBrain();
-
-    if (isFirstSolve) {
-      const nextSolved = new Set(Array.from(solvedIds).concat(selectedProblem.id));
-      setSolvedIds(nextSolved);
-      localStorage.setItem('codementor_solved', JSON.stringify(Array.from(nextSolved)));
-
-      confetti({
-        particleCount: 150,
-        spread: 120,
-        origin: { y: 0.8 },
-        colors: ['#6366f1', '#10b981', '#f59e0b', '#22c55e']
+    if (result.pass) {
+      window.dispatchEvent(new CustomEvent('memory-flow', { detail: { type: 'pass' } }));
+      
+      const content = `User ${session.username} solved "${selectedProblem.title}" (${selectedProblem.difficulty}) in ${_language}.`;
+      await retainMemory(content, {
+        type: 'solved',
+        problem: selectedProblem.id,
+        difficulty: selectedProblem.difficulty,
+        tags: selectedProblem.tags,
+        code: code,
+        language: _language,
+        timestamp: new Date().toISOString(),
       });
+      pulseBrain();
 
-      setStatusBarGreen(true);
-      setCelebrationText(`✓ Problem solved! Memory updated.`);
-      setTimeout(() => {
-        setStatusBarGreen(false);
-        setCelebrationText(null);
-      }, 3000);
+      if (isFirstSolve) {
+        const nextSolved = new Set(Array.from(solvedIds).concat(selectedProblem.id));
+        setSolvedIds(nextSolved);
+        localStorage.setItem('codementor_solved', JSON.stringify(Array.from(nextSolved)));
+
+        confetti({
+          particleCount: 150,
+          spread: 120,
+          origin: { y: 0.8 },
+          colors: ['#6366f1', '#10b981', '#f59e0b', '#22c55e']
+        });
+
+        setStatusBarGreen(true);
+        setCelebrationText(`✓ Problem solved! Memory updated.`);
+        setTimeout(() => {
+          setStatusBarGreen(false);
+          setCelebrationText(null);
+        }, 3000);
+      }
+    } else {
+      window.dispatchEvent(new CustomEvent('memory-flow', { detail: { type: 'fail', problemName: selectedProblem.title } }));
+      
+      const failMsg = `User ${session.username} failed "${selectedProblem.title}" (${selectedProblem.difficulty}). ${result.cases.filter((c: any) => !c.pass).length} test(s) failed.`;
+      await retainMemory(failMsg, {
+        type: 'failed',
+        problem: selectedProblem.id,
+        difficulty: selectedProblem.difficulty,
+        tags: selectedProblem.tags,
+        code: code,
+        language: _language,
+        timestamp: new Date().toISOString(),
+      });
+      pulseBrain();
+
+      if (settings.autoAnalyze) {
+        await reflectOnQuery(`Analyze failure for ${selectedProblem.title}: ${failMsg}`);
+      }
     }
 
     return result;
-  }, [selectedProblem, session, retainMemory, pulseBrain, solvedIds]);
+  }, [selectedProblem, session, retainMemory, pulseBrain, solvedIds, settings.autoAnalyze, reflectOnQuery]);
 
   if (!session) {
     return (
@@ -301,6 +375,13 @@ export default function App() {
             memories={memories}
             solvedIds={solvedIds}
             currentCode={currentCode}
+            session={session}
+            settings={settings}
+            onSettingsChange={handleSettingsChange}
+            onLogout={handleLogout}
+            onClearMemories={handleClearMemories}
+            onUpdateGroqKey={handleUpdateGroqKey}
+            onRefreshMemories={handleRefreshMemories}
           />
 
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>

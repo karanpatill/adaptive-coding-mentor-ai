@@ -71,3 +71,10 @@ export async function reflect(
   const data = await res.json();
   return data.response || data.reflection || '';
 }
+
+export async function clearAllMemories(key: string, bankId: string): Promise<void> {
+  await fetch(`${BASE}/memory-banks/${bankId}/facts`, {
+    method: 'DELETE',
+    headers: headers(key),
+  });
+}
